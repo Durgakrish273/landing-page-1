@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GAUGE_CIRCUMFERENCE, GAUGE_RADIUS, scoreTone } from "../../lib/scan.js";
+import { GAUGE_CIRCUMFERENCE, GAUGE_RADIUS, scoreTone } from "../../lib/format.js";
 import useCountUp from "../../lib/useCountUp.js";
 
 export default function ScoreGauge({ score }) {

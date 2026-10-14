@@ -1,9 +1,22 @@
 import ScoreGauge from "./ScoreGauge.jsx";
 import SkillChips from "./SkillChips.jsx";
-import { formatSize, noteFor, verdictFor } from "../../lib/scan.js";
+import { formatSize } from "../../lib/format.js";
 
-export default function ResultsPane({ result, file, onReset }) {
-  const { score, found, missing } = result;
+export default function ResultsPane({ result, onReset }) {
+  /* Everything here comes from the API response, so the fields are the server's
+   * names, not the old browser-side ones: matchedSkills/missingSkills rather
+   * than found/missing, and `summary` is generated server-side. */
+  const {
+    score,
+    verdict,
+    summary,
+    matchedSkills = [],
+    missingSkills = [],
+    resume,
+    engine,
+  } = result;
+
+  const size = resume?.size;
 
   return (
     <div className="pane">
@@ -13,14 +26,13 @@ export default function ResultsPane({ result, file, onReset }) {
           {/* aria-live so a screen reader announces the verdict when it lands,
               since the score changes without the learner moving focus. */}
           <h2 className="card__title" aria-live="polite">
-            {verdictFor(score)}
+            {verdict}
           </h2>
           <p className="card__sub">
-            {file.name} · {formatSize(file.size)}
+            {resume?.originalName}
+            {typeof size === "number" ? ` · ${formatSize(size)}` : ""}
           </p>
-          <p className="results__note">
-            {noteFor(score, found.length, missing.length)}
-          </p>
+          <p className="results__note">{summary}</p>
         </div>
       </div>
 
@@ -28,24 +40,25 @@ export default function ResultsPane({ result, file, onReset }) {
         <SkillChips
           title="Skills found"
           tone="good"
-          skills={found}
+          skills={matchedSkills}
           empty="Nothing detected"
         />
         <SkillChips
           title="Skills missing"
           tone="bad"
-          skills={missing}
+          skills={missingSkills}
           empty="No gaps found 🎉"
         />
       </div>
 
       <div className="results__actions">
         <button className="btn btn--primary" type="button" onClick={onReset}>
-          Scan another resume
+          Compare another resume
         </button>
         <p className="disclaimer">
-          This is a mock scan — the score is generated in the browser, not parsed
-          from your PDF.
+          {engine === "ai"
+            ? "Scored by the AI matcher."
+            : "Keyword-based match — AI scoring is not wired up yet."}
         </p>
       </div>
     </div>

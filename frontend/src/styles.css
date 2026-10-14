@@ -360,6 +360,59 @@ a { color: inherit; text-decoration: none; }
 }
 .footer__inner .brand__name { color: var(--text); }
 
+/* ---------- resume + job description side by side ---------- */
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+.compare-grid__col { display: flex; flex-direction: column; }
+
+/* The dropzone stretches to match the textarea's height so the two columns line
+   up, which is why it is a flex column with a centred body rather than fixed
+   padding. */
+.compare-grid__col .dropzone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+}
+.dropzone.is-filled {
+  border-style: solid;
+  border-color: rgba(52, 211, 153, 0.4);
+}
+.dropzone__icon { flex: 0 0 auto; }
+
+.field { display: flex; flex-direction: column; gap: 0.4rem; }
+.field__label { font-size: 0.9rem; font-weight: 600; }
+.field__input {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-alt);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+.field__input::placeholder { color: var(--muted); }
+.field__input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-color: var(--primary);
+}
+.field__input--area { min-height: 100%; flex: 1; line-height: 1.5; }
+.field__hint { color: var(--muted); font-size: 0.82rem; }
+
+/* A disabled button has to look disabled, or the learner clicks it and assumes
+   the app is broken rather than waiting for the form to be complete. */
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:disabled:hover { background: var(--primary); color: #06101f; }
+
 /* ---------- motion / small screens ---------- */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
