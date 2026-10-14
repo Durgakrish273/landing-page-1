@@ -1,6 +1,8 @@
+import crypto from "node:crypto";
 import mongoose from "mongoose";
 import Comparison from "../models/Comparison.js";
-import { ENGINE, analyze } from "../services/analyze.js";
+import { scoreResume } from "../services/analyze.js";
+import { extractPdfText } from "../services/pdfText.js";
 import { asyncHandler } from "../utils.js";
 
 const MIN_JD_LENGTH = 20;
@@ -18,9 +20,11 @@ function toClient(doc) {
     summary: doc.summary,
     matchedSkills: doc.matchedSkills,
     missingSkills: doc.missingSkills,
+    warning: doc.warning,
     resume: {
       originalName: doc.resume.originalName,
       size: doc.resume.size,
+      textLength: (doc.resume.text ?? "").length,
     },
     jobDescription: doc.jobDescription,
     createdAt: doc.createdAt,
@@ -31,8 +35,26 @@ function httpError(status, message) {
   return Object.assign(new Error(message), { status });
 }
 
-function badRequest(message) {
-  return Object.assign(new Error(message), { status: 400 });
+const badRequest = (message) => httpError(400, message);
+
+/* A fingerprint of exactly what determines the score.
+ *
+ * Same resume bytes + same job description + same engine = the same answer, so
+ * the earlier record can be returned instead of paying labd again. This matters
+ * because every model call spends the learner's monthly allowance — re-uploading
+ * the same file while debugging the UI should not cost anything.
+ *
+ * The engine is in the hash deliberately: a result produced by the keyword
+ * fallback must not be served once labd is available again. */
+function fingerprint({ fileBuffer, jobDescription, engine }) {
+  return crypto
+    .createHash("sha256")
+    .update(fileBuffer)
+    .update("\u0000")
+    .update(jobDescription)
+    .update("\u0000")
+    .update(engine)
+    .digest("hex");
 }
 
 /** POST /api/comparisons — multipart: `resume` (PDF) + `jobDescription`. */
@@ -48,25 +70,45 @@ export const createComparison = asyncHandler(async (req, res) => {
     );
   }
 
-  // Filled synchronously for now. When the AI step lands this becomes the
-  // queue: create as "pending", return, and let a worker complete it.
-  const analysis = analyze({
-    resumeName: req.file.originalname,
-    resumeSize: req.file.size,
+  // Which engine this request will try for. Kept in the hash so a keyword-row
+  // cache entry is never mistaken for an AI one.
+  const engineRequested = process.env.LABD_API_KEY ? "ai" : "keyword";
+  const hash = fingerprint({
+    fileBuffer: req.file.buffer,
     jobDescription,
+    engine: engineRequested,
+  });
+
+  const cached = await Comparison.findOne({ hash }).lean();
+  if (cached) {
+    // `cached: true` is not a field the client renders; it is here so the shape
+    // stays identical and a caller could tell the difference if it wanted to.
+    return res.status(200).json({ comparison: toClient(cached), cached: true });
+  }
+
+  // The PDF's text layer. A scanned resume has none, and no amount of parsing
+  // will produce it — that is an OCR problem.
+  const resumeText = extractPdfText(req.file.buffer);
+
+  const { result, engine, warning } = await scoreResume({
+    resumeText,
+    jobDescription,
+    apiKey: process.env.LABD_API_KEY,
   });
 
   const comparison = await Comparison.create({
+    hash,
     resume: {
       originalName: req.file.originalname,
       mimeType: req.file.mimetype,
       size: req.file.size,
-      text: "", // no PDF parsing yet — see services/analyze.js
+      text: resumeText,
     },
     jobDescription,
-    engine: ENGINE,
+    engine,
     status: "complete",
-    ...analysis,
+    warning,
+    ...result,
   });
 
   res.status(201).json({ comparison: toClient(comparison) });
