@@ -6,3 +6,8 @@ I want to convert this entire project into a react project
 I want you to move this react project into frontend folder and build a backend folder that contains the express server to handle the request, lets connect to mongoDB.
 
 The application should take resume PDF and a JD for comparison, AI part will be added later
+
+add vercel.json file to backend and frontend folder. i am going to create two projects in vercel for deployment
+
+ 
+

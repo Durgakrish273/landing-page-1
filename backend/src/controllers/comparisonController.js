@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Comparison from "../models/Comparison.js";
 import { ENGINE, analyze } from "../services/analyze.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { asyncHandler } from "../utils.js";
 
 const MIN_JD_LENGTH = 20;
 
