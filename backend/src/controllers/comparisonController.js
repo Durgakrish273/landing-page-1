@@ -72,6 +72,12 @@ export const createComparison = asyncHandler(async (req, res) => {
 
   // Which engine this request will try for. Kept in the hash so a keyword-row
   // cache entry is never mistaken for an AI one.
+  /* Which engine this request will TRY for. The hash uses the engine that
+   * actually ran, not this one — see the Comparison.create call below, where a
+   * fallback recomputes it. Hashing the attempted engine would let a degraded
+   * keyword result be cached under the AI key, and then every later upload of
+   * the same resume would be served that stale answer as a cache hit with the
+   * warning stripped — never retrying labd, even after the allowance reset. */
   const engineRequested = process.env.LABD_API_KEY ? "ai" : "keyword";
   const hash = fingerprint({
     fileBuffer: req.file.buffer,
@@ -97,7 +103,12 @@ export const createComparison = asyncHandler(async (req, res) => {
   });
 
   const comparison = await Comparison.create({
-    hash,
+    // Fingerprint by the engine that actually ran, so a keyword fallback lands
+    // under the keyword key instead of poisoning the AI one.
+    hash:
+      engine === engineRequested
+        ? hash
+        : fingerprint({ fileBuffer: req.file.buffer, jobDescription, engine }),
     resume: {
       originalName: req.file.originalname,
       mimeType: req.file.mimetype,
