@@ -225,6 +225,13 @@ a { color: inherit; text-decoration: none; }
   stroke-dashoffset: 326.7;
   transition: stroke-dashoffset 0.9s ease, stroke 0.3s;
 }
+/* The score's tone lives on the wrapper now, so the arc colour is a class
+   rather than an inline style applied from JS. */
+.gauge--good .gauge__fill { stroke: var(--good); }
+.gauge--ok .gauge__fill { stroke: var(--primary); }
+.gauge--bad .gauge__fill {
+  stroke: var(--bad);
+}
 .gauge__value {
   position: absolute;
   inset: 0;
